@@ -1,0 +1,4 @@
+.DS_Store
+node_modules
+spool/*.jpg
+public/photos/*.jpg

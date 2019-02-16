@@ -1,0 +1,153 @@
+<html>
+  <head>
+    <style type="text/css">
+      html,
+      body {
+        border: 0;
+        background: black;
+      }
+      img.live-preview {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      img.preview {
+        position: absolute;
+        width: 120px;
+        bottom: 20px;
+        left: 20px;
+        border: 5px solid white;
+      }
+      img.preview.large {
+        bottom: inherit;
+        left: inherit;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border: 0;
+      }
+
+      .status {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        padding: 30px;
+        background: black;
+        color: white;
+        font: 2em monospace;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <img class="live-preview" />
+
+    <img class="preview" />
+
+    <div class="status">Loading</div>
+
+    <script type="text/javascript">
+      let clientState = {};
+      let lastPreviewPausedState = true;
+
+      function setStatus() {
+        const status = document.querySelector(".status");
+        if (clientState.status === "") {
+          status.className = "status hidden";
+        } else {
+          status.className = "status";
+        }
+        status.innerHTML = clientState.status;
+      }
+
+      function showPreview() {
+        const preview = document.querySelector("img.preview");
+        if (clientState.photo) {
+          if (clientState.largePreview) {
+            preview.className = "preview large";
+          } else {
+            preview.className = "preview";
+          }
+          if (preview.src !== "/photos/" + clientState.photo + ".jpg") {
+            preview.src = "/photos/" + clientState.photo + ".jpg";
+          }
+        } else {
+          preview.className = "preview hidden";
+        }
+      }
+
+      function wsPreview() {
+        window.ws = new WebSocket("ws://localhost:1337/echo");
+        ws.binaryType = "arraybuffer";
+
+        function getNextFrame() {
+          if (ws.readyState === 1 && !clientState.pausePreview) {
+            ws.send("hi");
+          } else {
+            setStatus(`Error, readyState=${ws.readyState}`);
+          }
+        }
+
+        const image = document.querySelector("img.live-preview"); //new Image();
+        let nextImageUrl;
+        image.onload = () => {
+          URL.revokeObjectURL(nextImageUrl);
+          requestAnimationFrame(() => ws.send("hi"));
+        };
+
+        ws.addEventListener("message", ({ data }) => {
+          if (typeof data === "string") {
+            console.log("Got clientState", data);
+            try {
+              const payload = JSON.parse(data);
+              Object.assign(clientState, payload);
+              setStatus();
+              showPreview();
+
+              console.log("lastPreviewPausedState", lastPreviewPausedState);
+              console.log(
+                "clientState.pausePreviews",
+                clientState.pausePreview
+              );
+              if (
+                lastPreviewPausedState === true &&
+                clientState.pausePreview === false
+              ) {
+                ws.send("ping");
+              }
+              lastPreviewPausedState = clientState.pausePreview;
+            } catch (err) {
+              setStatus("Bad message");
+              console.log("Error prasing payload:", err);
+            }
+          } else if (data != null && typeof data === "object") {
+            // setStatus("OK");
+            const blob = new Blob([data], { type: "image/jpeg" });
+            nextImageUrl = URL.createObjectURL(blob);
+            image.src = nextImageUrl;
+          }
+          return;
+        });
+
+        ws.addEventListener("close", () => {
+          setStatus("Disconnected");
+        });
+
+        ws.addEventListener("error", () => {
+          setStatus("Disconnected");
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", function(event) {
+        wsPreview();
+      });
+    </script>
+
+    <script type="text/javascript" src="/js/dat.gui.js"></script>
+    <script type="text/javascript" src="/js/booth.js"></script>
+  </body>
+</html>
