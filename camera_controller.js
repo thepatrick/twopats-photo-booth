@@ -56,11 +56,7 @@ module.exports = function createCameraController() {
 
   function findCamera() {
     return new Promise((resolve, reject) => {
-      gphoto.list(cameras => {
-        console.log("Found " + cameras.length + " cameras");
-        const camera = cameras.filter(camera =>
-          camera.model.match(/(Sony)/)
-        )[0];
+      gphoto.list(([camera]) => {
         if (!camera) {
           reject(new Error("Camera not found"));
           return;
@@ -72,10 +68,6 @@ module.exports = function createCameraController() {
             reject(new Error("Camera settings did not load: " + er.message));
             return;
           }
-          console.log(
-            "Battery:",
-            settings.main.children.status.children.batterylevel.value
-          );
           resolve(makeMyCamera(camera));
         });
       });
