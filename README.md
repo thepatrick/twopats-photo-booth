@@ -4,10 +4,12 @@ See TODO.md, there might be important things there.
 
 ## Requirements
 
-- node 8 (the streamdeck library does not work with node 10 yet :()
+- macOS - most of this project will probably work on Linux
+- [homebrew](https://brew.sh/) installed
+- [nvm](https://github.com/creationix/nvm) installed
+- node 8 (`nvm i 8`) the streamdeck library does not work with node 10 yet :()
 - a camera supported by gphoto2 (this code assumes a Sony one, and one that allows live previews)
 - an elgato stream deck
-- you are running on macOS
 
 ## Printing
 
